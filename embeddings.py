@@ -3,6 +3,8 @@ from torch.utils.data import DataLoader
 import numpy as np
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+import plotly.express as px
 
 def get_embeddings(model, data_list, device='cpu', batch_size=32):
     """
@@ -33,8 +35,7 @@ def plot_tsne(embeddings, labels, title="t-SNE of Embeddings", plot_3d=False, sa
     save_path: if provided and plot_3d=True, saves the interactive plot as HTML
     """
     if plot_3d:
-        from sklearn.manifold import TSNE
-        import plotly.express as px
+        
         tsne = TSNE(n_components=3, random_state=42)
         reduced = tsne.fit_transform(embeddings)
         fig = px.scatter_3d(

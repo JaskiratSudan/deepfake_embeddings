@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from tqdm import tqdm
+from embeddings import *
 
 class SimpleSiameseCNN(nn.Module):
     def __init__(self, embedding_dim=128):
@@ -32,50 +33,59 @@ def train_model(
     optimizer,
     loss_fn,
     device,
+    # --- New parameters for plotting ---
+    val_data_list=None,
+    val_labels=None,
+    plot_every=1,
+    # ------------------------------------
     epochs=10,
-    scheduler=None,
-    print_every=1
+    scheduler=None
 ):
     """
-    Generic PyTorch training loop.
-    Args:
-        model: torch.nn.Module
-        train_loader: DataLoader yielding (input1, input2, label)
-        optimizer: torch.optim.Optimizer
-        loss_fn: loss function (e.g., ContrastiveLoss)
-        device: torch.device
-        epochs: number of epochs
-        scheduler: optional learning rate scheduler
-        print_every: print loss every N epochs
+    Training loop that generates a 2D t-SNE plot of validation embeddings every N epochs.
     """
     model.to(device)
     for epoch in range(1, epochs + 1):
         model.train()
         running_loss = 0.0
-        for batch in train_loader:
-            # Unpack batch
-            if len(batch) == 3:
-                x1, x2, labels = batch
-            else:
-                raise ValueError("train_loader must yield (x1, x2, labels) tuples")
+        
+        progress_bar = tqdm(train_loader, desc=f"Epoch {epoch}/{epochs}", leave=False)
+
+        for batch in progress_bar:
+            x1, x2, labels = batch
             x1, x2, labels = x1.to(device), x2.to(device), labels.to(device)
 
-            # Forward
             out1, out2 = model(x1, x2)
             loss = loss_fn(out1, out2, labels)
 
-            # Backward
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
+            
             running_loss += loss.item()
+            current_avg_loss = running_loss / (progress_bar.n + 1)
+            progress_bar.set_postfix(loss=f"{current_avg_loss:.4f}")
 
         if scheduler is not None:
             scheduler.step()
-
+            
         avg_loss = running_loss / len(train_loader)
-        if epoch % print_every == 0:
-            print(f"Epoch [{epoch}/{epochs}] - Loss: {avg_loss:.4f}")
+        print(f"Epoch [{epoch}/{epochs}] Summary - Loss: {avg_loss:.4f}")
+
+        # --- Block to generate and plot embeddings ---
+        if val_data_list and val_labels and (epoch % plot_every == 0):
+            print(f"Generating t-SNE plot for epoch {epoch}...")
+            # Use the existing get_embeddings function
+            embeddings = get_embeddings(model, val_data_list, device=device)
+            
+            # Use the existing plot_tsne function for a 2D plot
+            plot_tsne(
+                embeddings, 
+                val_labels, 
+                title=f"t-SNE of Validation Embeddings after Epoch {epoch}",
+                plot_3d=False
+            )
+        # ---------------------------------------------
 
     print("Training complete.")
 

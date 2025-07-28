@@ -1,0 +1,4 @@
+Source:	  LibriVox (https://librivox.org)
+Language: English
+Speaker:  Eliot Miller
+Duration: 38:23:35
